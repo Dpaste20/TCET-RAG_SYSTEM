@@ -1,10 +1,10 @@
+import pandas as pd
 import re
-import base64
 import streamlit as st
 from ollama import chat
 
 # Set Streamlit page configuration (optional)
-st.set_page_config(page_title="Ollama Streaming Chat", layout="centered")
+st.set_page_config(page_title="TCET AI", layout="centered")
 
 def format_reasoning_response(thinking_content):
     """Format assistant content by removing think tags."""
@@ -77,14 +77,14 @@ def process_response_phase(stream):
 def get_chat_model():
     """Get a cached instance of the chat model."""
     return lambda messages: chat(
-        model="deepseek-r1:7b",
+        model="deepseek-r1:8b",
         messages=messages,
         stream=True,
     )
 
 def handle_user_input():
     """Handle new user input and generate assistant response."""
-    if user_input := st.chat_input("Type your message here..."):
+    if user_input := st.chat_input("Ask about the data..."):
         st.session_state["messages"].append({"role": "user", "content": user_input})
         
         with st.chat_message("user"):
@@ -105,12 +105,37 @@ def handle_user_input():
 def main():
     """Main function to handle the chat interface and streaming responses."""
     st.markdown("""
-    # TCET RAG system
+    # TCET RAG System with Data Insights
     """, unsafe_allow_html=True)
-    st.markdown("<h4 style='text-align: center;'>In active development by Dhruv Paste(TE ITA 66) and Aditya Patil(TE ITA 65)</h4>", unsafe_allow_html=True)
+    st.markdown("<h6 style='text-align: center;'>In active development by Dhruv Paste(TE ITA 66) and Aditya Patil(TE ITA 65)</h6>", unsafe_allow_html=True)
+    
+    # File uploader for Excel or CSV
+    uploaded_file = st.file_uploader("Upload your Excel or CSV file", type=["csv", "xlsx"])
+
+    if uploaded_file is not None:
+        # Read the file into a DataFrame based on its type
+        if uploaded_file.name.endswith(".csv"):
+            df = pd.read_csv(uploaded_file)
+        elif uploaded_file.name.endswith(".xlsx"):
+            df = pd.read_excel(uploaded_file)
+        
+        # Show the first few rows of the dataframe to the user
+        st.write(df.head())
+        
+        # Generate insights from the data (simple summary)
+        data_insights = generate_data_insights(df)
+        
+        # Add insights to the system message to set the context for the assistant
+        st.session_state["messages"].append({"role": "system", "content": f"Here are some insights from the uploaded data: {data_insights}"})
     
     display_chat_history()
     handle_user_input()
+
+def generate_data_insights(df):
+    """Generate simple insights like column names and basic stats."""
+    summary = f"The dataset has {len(df)} rows and {len(df.columns)} columns. The columns are: {', '.join(df.columns)}."
+    numeric_summary = df.describe().to_string()  # Basic statistics for numerical columns
+    return f"{summary} Here are some basic statistics:\n{numeric_summary}"
 
 if __name__ == "__main__":
     # Initialize session state
@@ -119,6 +144,7 @@ if __name__ == "__main__":
         st.session_state["messages"] = [
             {
                 "role": "system", 
-                "content": f"You are a helpful AI assistant for Thakur College of Engineering and Technology(TCET) , which based RAG system . And your name is {system_name} "}
+                "content": f"You are a helpful AI assistant for Thakur College of Engineering and Technology(TCET), and your name is {system_name}. I can help with analyzing uploaded data."
+            }
         ]
     main()
